@@ -2,4 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/Smartcraft.Quotes/Smartcraft.Quotes.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Smartcraft.Quotes.Tests/Smartcraft.Quotes.Tests.csproj" />
+  </Folder>
 </Solution>

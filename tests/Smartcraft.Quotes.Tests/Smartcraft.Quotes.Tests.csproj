@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>13</LangVersion>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>Smartcraft.Quotes.Tests</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="NUnit" Version="4.4.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="5.2.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Smartcraft.Quotes\Smartcraft.Quotes.csproj" />
+  </ItemGroup>
+  <!-- C++ oracle: copy next to the test DLL so QuoteCasesTests can load it without reaching into the repo. -->
+  <ItemGroup>
+    <None Include="..\..\fixtures\quote-cases.json" Link="fixtures\quote-cases.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>
