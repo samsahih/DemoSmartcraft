@@ -1,23 +1,74 @@
-Proof-of-method analog: one C++ job-quote leaf → extraction contract. Not Smartcraft’s product, not a rewrite.
+# C++ to .NET Quote Engine — Proof of Method
 
-**Now:** Step 4 slice implementation. Calculator, handler, and `POST /quotes/calculate` live in `Features/Quotes/CalculateQuote/`. `dotnet test` is **green**.
+This repository demonstrates a repeatable pipeline for moving legacy C++ business logic into a modern .NET 10 API **without changing the numbers**.
 
-**Step 1 — C++ demo** (`legacy-cpp/quote_price.cpp`): integer øre, in-memory price book (not a DB). If the cache is warm, line `unit_ore` is ignored. Hidden rules: qty sum `< 3` skips markup; line qty `>= 10` takes 5% off before markup; markup is materials only; every `/` truncates toward zero (including 25% VAT). Oracle: `legacy-cpp/compile-and-emit.bat` → `fixtures/quote-cases.json`. `truncating_labor_and_vat` is the case that punishes a C# rounding port.
+It is a functional proof of concept. **All tests pass.**
 
-**Step 2 — extraction**
-- Pseudocode: [contracts/quote_price.pseudocode.md](contracts/quote_price.pseudocode.md)
-- Records (slice only): `src/Smartcraft.Quotes/Features/Quotes/CalculateQuote/`
-- JSON spec: [fixtures/quote-cases.json](fixtures/quote-cases.json)
-- Compact contract: [contracts/QuotePrice.json](contracts/QuotePrice.json)
+---
 
-**Step 3 — NUnit harness** (`tests/Smartcraft.Quotes.Tests/`)
+## The Core Strategy
 
-- **Architecture enforcement** (`Architecture/SliceArchitectureTests.cs`): reflection and `Directory.GetFiles` lock the slice namespace, keep money as `int` øre (not `decimal` / rounding), and ban extra layer projects (`Contracts`, `Domain`, `Application`, `Infrastructure`) plus EF/SQL/Testcontainers. Stops over-architecture and workspace pollution.
-- **Oracle seam** (`CalculateQuote/QuoteCasesTests.cs`): cases are fed from `fixtures/quote-cases.json`. `Run()` calls `QuoteCalculator` with `InMemoryPriceBook`. `truncating_labor_and_vat` is the tripwire for a rounding port.
-- **Zero type pollution:** JSON DTOs (`QuoteCaseDto` and friends) are `private sealed` inside the test class. Production `CalculateQuoteRequest` / `CalculateQuoteResponse` stay the only home for those types.
+1. **Extract:** Read the legacy C++ code to uncover real business rules—including hidden edge cases.
+2. **Record:** Capture real C++ execution outputs as JSON (the single source of truth).
+3. **Guard:** Write tests that lock the original outputs, prevent extra projects and layers we do not need, and enforce integer øre math.
+4. **Implement:** Build a small, high-throughput .NET 10 API for this one feature that matches the C++ outputs down to the exact øre.
 
-**Step 4 — .NET 10 slice** (`@02-slice-implementation.mdc`)
+---
 
-- **Price book:** `IPriceBook` / `InMemoryPriceBook` — process-lifetime SKU → øre map (`NAIL-100`, `TIMB-2x4`, `SCREW-50`). No SQL, EF, or `DbContext`.
-- **Calculator:** `QuoteCalculator` — integer øre, C++-style `/` (truncate toward zero). Small-job markup skip, per-line volume discount, materials-only markup, 25% VAT.
-- **Handler + endpoint:** `ICalculateQuoteHandler` orchestrates; `POST /quotes/calculate` is a thin adapter. `Smartcraft.Quotes` is a web host. Slice records and fixture expected values were not rewritten.
+## What the Engine Does
+
+Calculates HVAC and Plumbing job estimates using integer øre arithmetic (1 krone = 100 øre) matching legacy C++ behavior—no floating-point rounding or `decimal` conversions.
+
+**Hidden business rules enforced by the test suite:**
+* **Small Job Exemption:** Jobs with fewer than 3 items force markup to 0%.
+* **Volume Discount:** Line items with 10+ items receive a 5% discount before markup is applied.
+* **Materials-Only Markup:** Markup percentage applies strictly to materials, never labor.
+* **Integer Truncation:** 25% VAT and labor calculations use C++ integer division (fractional øre are truncated toward zero, not rounded).
+
+---
+
+## Repository Structure
+
+* `legacy-cpp/` — Original C++ pricing logic (`quote_price.cpp`) and fixture generator.
+* `fixtures/quote-cases.json` — Recorded C++ results used for test assertions.
+* `contracts/` — Extracted functional pseudocode and JSON specifications.
+* `src/Smartcraft.Quotes/` — .NET 10 API for this feature (`Features/Quotes/CalculateQuote/`).
+* `tests/Smartcraft.Quotes.Tests/` — Tests that check architecture and match the C++ results.
+
+---
+
+## How to Run
+
+```bash
+# Run all architecture and C++ parity tests
+dotnet test
+
+# Run the ASP.NET Core Web API host
+dotnet run --project src/Smartcraft.Quotes
+```
+
+Leave that window running. Open a **second** PowerShell and call `POST /quotes/calculate`. Copy the `http://localhost:...` URL from the running window (typically `http://localhost:61785`). Use HTTP unless you already trust the HTTPS dev cert.
+
+```powershell
+Invoke-RestMethod `
+  -Uri http://localhost:61785/quotes/calculate `
+  -Method POST `
+  -ContentType "application/json" `
+  -Body '{
+    "materials": [
+      { "sku": "NAIL-100", "quantity": 2, "unitOre": 0 }
+    ],
+    "labor": { "minutes": 60, "rateOrePerHour": 80000 },
+    "markupBps": 1500
+  }'
+```
+
+That is a small job (2 items), so markup should be 0. Expected result:
+
+```
+materialsOre : 2500
+laborOre     : 80000
+markupOre    : 0
+vatOre       : 20625
+totalOre     : 103125
+```
