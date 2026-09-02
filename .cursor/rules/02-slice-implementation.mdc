@@ -1,0 +1,32 @@
+---
+description: .NET 10 vertical-slice implementation (turn existing red tests green)
+globs: **/*.{cs,csproj}
+alwaysApply: false
+---
+
+# .NET 10 Slice Implementation
+
+Use this after extraction **and** after the NUnit harness exists. Contracts, pseudocode, and JSON scenarios come from `01-extraction-agent.mdc` — do not re-extract C++ here. Do not re-read the C++ to invent new expected values.
+
+- Vertical Slice, not Clean Architecture. Put new work in `Features/<Area>/<UseCase>/` (request, handler, endpoint, data access together). This leaf: `Features/Quotes/CalculateQuote/`.
+- Separation of concerns inside the slice: endpoints are thin HTTP adapters; handlers orchestrate; calculators hold migrated rules; data access sits behind an interface in the same slice. Do not add `Domain` / `Application` / `Infrastructure` projects or folders.
+- Consume the extraction records already in that folder. **Do not rewrite** `CalculateQuoteRequest` / `CalculateQuoteResponse`. Do not duplicate those records.
+- No SQL, Entity Framework, `DbContext`, or Testcontainers for this leaf. The C++ price book is an in-memory static map; replicate it behind an `IPriceBook` interface in the slice.
+- **Math:** All money is integer øre. Use C++-style integer division (truncate toward zero). Do not use `decimal`, `float`, or banker's rounding. `truncating_labor_and_vat` is the tripwire.
+- **Tests already exist and are red.** `tests/Smartcraft.Quotes.Tests/` loads `fixtures/quote-cases.json`; `QuoteCasesTests.Run` still returns zeros. Architecture tests are under `Architecture/`. Your job is to implement calculator, handler, and a thin endpoint until `dotnet test` is green. Do not rewrite, skip, or delete the tests. Wire `Run` to the calculator; do not change fixture expected values.
+- Switching `Smartcraft.Quotes` from the class library SDK to a web host (or adding a host) is in scope. Not YARP, not a strangler, not a second model tree.
+- Stay SOLID/DRY: depend on abstractions (`IPriceBook`, `ICalculateQuoteHandler`); do not duplicate quote math in the endpoint.
+- Run `dotnet test`. If an architecture test forbids a pattern, fix the design, do not delete the test.
+
+```csharp
+// BAD — pricing math in the endpoint
+app.MapPost("/quotes/calculate", (CalculateQuoteRequest request, IPriceBook prices) =>
+{
+    var unit = prices.UnitOreFor("NAIL-100");
+    return Results.Ok((unit * 2500) / 10000);
+});
+
+// GOOD — thin adapter; rules live in the calculator
+app.MapPost("/quotes/calculate", (CalculateQuoteRequest request, ICalculateQuoteHandler handler) =>
+    Results.Ok(handler.Calculate(request)));
+```

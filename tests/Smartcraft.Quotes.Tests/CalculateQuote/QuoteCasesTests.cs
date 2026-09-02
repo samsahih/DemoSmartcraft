@@ -12,9 +12,7 @@ namespace Smartcraft.Quotes.Tests.CalculateQuote;
 /// expected values — if a number is wrong, the fixture is the oracle, not a
 /// new rounding rule in C#.
 ///
-/// The five cases stay red until a calculator exists in
-/// <c>Features/Quotes/CalculateQuote/</c> and matches the JSON. Wiring that
-/// calculator is the next step; do not change the JSON to make tests green.
+/// Expected øre come from the JSON. Do not change the JSON to make tests green.
 /// </summary>
 public sealed class QuoteCasesTests
 {
@@ -80,14 +78,13 @@ public sealed class QuoteCasesTests
     }
 
     /// <summary>
-    /// Seam for the slice calculator. Returns zeros today so the five oracle
-    /// cases fail with Expected vs 0. When <c>QuoteCalculator</c> exists in
-    /// the feature folder, call it here — still using these expected values.
+    /// Seam for the slice calculator. Feeds the fixture request through
+    /// <c>QuoteCalculator</c> with the in-memory price book.
     /// </summary>
     private static CalculateQuoteResponse Run(CalculateQuoteRequest request)
     {
-        _ = request;
-        return new CalculateQuoteResponse(0, 0, 0, 0, 0);
+        var calculator = new QuoteCalculator(new InMemoryPriceBook());
+        return calculator.Calculate(request);
     }
 
     /// <summary>

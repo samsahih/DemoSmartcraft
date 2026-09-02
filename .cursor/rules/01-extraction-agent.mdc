@@ -14,7 +14,7 @@ This repo is **vertical slice**, not Clean Architecture. Extraction must not inv
 - C# records belong in `src/Smartcraft.Quotes/Features/<Area>/<UseCase>/` (this leaf: `Features/Quotes/CalculateQuote/`). That folder is the only source of truth for request/response/line types.
 - If those records already exist in the slice, **reuse them**. Do not add a parallel `Contracts` / `Domain` / `Application` / `Infrastructure` project, folder, or namespace (`Smartcraft.Quotes.Contracts` is a duplicate layer — forbidden).
 - Spec-only files (pseudocode, JSON scenarios, `contracts/QuotePrice.json`) are documentation, not a type layer. Do not emit a second `.cs` copy of slice DTOs next to them.
-- Still do **not** write endpoints, handlers, calculators, SQL, or services. That is `@dotnet-10-migration.mdc`.
+- Still do **not** write endpoints, handlers, calculators, SQL, or services. That is `@02-slice-implementation.mdc`.
 
 ### Guardrails
 - **C++ type mapping:** Map C++ `int` / `long` øre to C# `int` / `long` by bit-width. This leaf uses C++ `int` → C# `int`. Do not widen existing `int` records to `long`. Do not add unit conversion methods, `ToKrone()`, or formatting helpers in extraction.
