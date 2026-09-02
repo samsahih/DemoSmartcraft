@@ -1,0 +1,89 @@
+[
+  {
+    "id": "small_job_skips_markup",
+    "input": {
+      "markup_bps": 1500,
+      "labor": { "minutes": 60, "rate_ore_per_hour": 80000 },
+      "materials": [
+        { "sku": "NAIL-100", "quantity": 2, "unit_ore": 0 }
+      ]
+    },
+    "expected": {
+      "materials_ore": 2500,
+      "labor_ore": 80000,
+      "markup_ore": 0,
+      "vat_ore": 20625,
+      "total_ore": 103125
+    }
+  },
+  {
+    "id": "volume_discount_then_markup",
+    "input": {
+      "markup_bps": 1500,
+      "labor": { "minutes": 30, "rate_ore_per_hour": 80000 },
+      "materials": [
+        { "sku": "NAIL-100", "quantity": 10, "unit_ore": 0 },
+        { "sku": "TIMB-2x4", "quantity": 1, "unit_ore": 0 }
+      ]
+    },
+    "expected": {
+      "materials_ore": 20775,
+      "labor_ore": 40000,
+      "markup_ore": 3116,
+      "vat_ore": 15972,
+      "total_ore": 79863
+    }
+  },
+  {
+    "id": "price_book_overrides_line_unit",
+    "input": {
+      "markup_bps": 1000,
+      "labor": { "minutes": 0, "rate_ore_per_hour": 0 },
+      "materials": [
+        { "sku": "NAIL-100", "quantity": 4, "unit_ore": 99999 }
+      ]
+    },
+    "expected": {
+      "materials_ore": 5000,
+      "labor_ore": 0,
+      "markup_ore": 500,
+      "vat_ore": 1375,
+      "total_ore": 6875
+    }
+  },
+  {
+    "id": "cache_miss_uses_line_unit",
+    "input": {
+      "markup_bps": 1500,
+      "labor": { "minutes": 0, "rate_ore_per_hour": 0 },
+      "materials": [
+        { "sku": "CUSTOM-X", "quantity": 1, "unit_ore": 20000 },
+        { "sku": "SCREW-50", "quantity": 2, "unit_ore": 1 }
+      ]
+    },
+    "expected": {
+      "materials_ore": 20900,
+      "labor_ore": 0,
+      "markup_ore": 3135,
+      "vat_ore": 6008,
+      "total_ore": 30043
+    }
+  },
+  {
+    "id": "truncating_labor_and_vat",
+    "input": {
+      "markup_bps": 2000,
+      "labor": { "minutes": 7, "rate_ore_per_hour": 80000 },
+      "materials": [
+        { "sku": "SCREW-50", "quantity": 1, "unit_ore": 0 }
+      ]
+    },
+    "expected": {
+      "materials_ore": 450,
+      "labor_ore": 9333,
+      "markup_ore": 0,
+      "vat_ore": 2445,
+      "total_ore": 12228
+    }
+  }
+]

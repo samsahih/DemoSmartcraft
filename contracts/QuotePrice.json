@@ -1,0 +1,42 @@
+{
+  "function": "quote_price",
+  "source": "legacy-cpp/quote_price.cpp",
+  "money": "integer øre; every division truncates toward zero",
+  "inputs": {
+    "materials": [
+      { "name": "sku", "type": "const char*" },
+      { "name": "quantity", "type": "int" },
+      { "name": "unit_ore", "type": "int", "note": "ignored when sku is in the process-lifetime price book" }
+    ],
+    "labor": [
+      { "name": "minutes", "type": "int" },
+      { "name": "rate_ore_per_hour", "type": "int" }
+    ],
+    "markup_bps": { "type": "int", "example": "1500 = 15%" }
+  },
+  "rules": [
+    "Resolve unit price from the in-memory price book when the SKU is known; otherwise use the line unit_ore.",
+    "Skip material lines with quantity <= 0.",
+    "If a line quantity is >= 10, apply a 5% volume discount to that line before markup (ore * 95 / 100).",
+    "Labor øre = minutes * rate_ore_per_hour / 60.",
+    "If the sum of material quantities is < 3, force markup_bps to 0 (small-job exception).",
+    "Markup applies to materials only, never labor (materials_ore * markup_bps / 10000).",
+    "VAT is 25% of materials + labor + markup (net * 2500 / 10000).",
+    "total = net + vat."
+  ],
+  "outputs": [
+    "materials_ore",
+    "labor_ore",
+    "markup_ore",
+    "vat_ore",
+    "total_ore"
+  ],
+  "state": {
+    "in_memory_price_book": {
+      "NAIL-100": 1250,
+      "TIMB-2x4": 8900,
+      "SCREW-50": 450
+    },
+    "lifetime": "process static; not database state"
+  }
+}
