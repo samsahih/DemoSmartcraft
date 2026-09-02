@@ -1,0 +1,44 @@
+---
+description: Rule for extracting C++ legacy code into pseudocode and C# DTOs
+globs: ["**/*.cpp", "**/*.hpp", "**/*.h"]
+alwaysApply: false
+---
+# Role: Legacy Extraction & Analysis Agent
+Your job is to reverse-engineer legacy C++ code into clean functional specifications and lightweight C# data structures.
+
+Follow the C++ in front of you. This repo's analog is job-quote pricing (integer øre, in-memory price book, hidden markup/VAT branches). HVAC/plumbing examples below are for other leaves — do not invent technician grades, after-hours surcharges, or `decimal` money if the C++ uses integer øre.
+
+## Vertical slice (mandatory)
+This repo is **vertical slice**, not Clean Architecture. Extraction must not invent a second home for types.
+
+- C# records belong in `src/Smartcraft.Quotes/Features/<Area>/<UseCase>/` (this leaf: `Features/Quotes/CalculateQuote/`). That folder is the only source of truth for request/response/line types.
+- If those records already exist in the slice, **reuse them**. Do not add a parallel `Contracts` / `Domain` / `Application` / `Infrastructure` project, folder, or namespace (`Smartcraft.Quotes.Contracts` is a duplicate layer — forbidden).
+- Spec-only files (pseudocode, JSON scenarios, `contracts/QuotePrice.json`) are documentation, not a type layer. Do not emit a second `.cs` copy of slice DTOs next to them.
+- Still do **not** write endpoints, handlers, calculators, SQL, or services. That is `@dotnet-10-migration.mdc`.
+
+### Guardrails
+- **C++ type mapping:** Map C++ `int` / `long` øre to C# `int` / `long` by bit-width. This leaf uses C++ `int` → C# `int`. Do not widen existing `int` records to `long`. Do not add unit conversion methods, `ToKrone()`, or formatting helpers in extraction.
+- **Read-only slice records:** If C# records already exist in `Features/Quotes/CalculateQuote/`, treat them as read-only. Put new insight in Artifacts 1 and 3. Do not rename, widen types, or add helpers. The only mutation allowed: add a field that is an explicit C++ parameter/result missing from the records — not a rewrite.
+
+```csharp
+// BAD — duplicate DTOs outside the slice
+namespace Smartcraft.Quotes.Contracts;
+public sealed record QuoteInput(...);
+
+// GOOD — slice already owns them; extraction points at these
+// src/Smartcraft.Quotes/Features/Quotes/CalculateQuote/CalculateQuoteRequest.cs
+// src/Smartcraft.Quotes/Features/Quotes/CalculateQuote/CalculateQuoteResponse.cs
+```
+
+## Guidelines:
+1. DO NOT write full API controllers, databases, or service implementations yet.
+2. Carefully analyze the C++ logic, tracing all inputs, calculations, side effects, and edge cases (especially HVAC/Plumbing pricing rules).
+3. Output the following 3 artifacts for every C++ file analyzed:
+### Artifact 1: Business Logic Pseudocode
+- Clear, step-by-step plain English/pseudocode explaining the business rules.
+- Explicitly document any hidden assumptions, edge-case branches, or magic numbers.
+### Artifact 2: Lightweight C# Data Contracts
+- Immutable C# 13 `record` types for Inputs, Outputs, and Value Objects — **in the feature slice**, or as a spec that names those slice types. Never a duplicate `contracts/*.cs`. Existing slice records are read-only (see Guardrails).
+- Use explicit types matching the C++ (integer øre here, `int` not `decimal`/`long` unless the C++ width requires it). Do not invent HVAC enums this leaf does not have.
+### Artifact 3: Behavioral Test Spec (JSON)
+- Output a JSON structure with 3-5 realistic test scenarios (inputs vs. expected outputs) including edge cases. Prefer existing `fixtures/quote-cases.json`; do not fork a second golden file.

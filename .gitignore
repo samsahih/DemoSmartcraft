@@ -1,0 +1,9 @@
+bin/
+obj/
+*.user
+*.suo
+.vs/
+legacy-cpp/*.exe
+legacy-cpp/*.obj
+legacy-cpp/*.pdb
+legacy-cpp/*.ilk
