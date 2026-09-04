@@ -102,5 +102,108 @@
       "vat_ore": 214748,
       "total_ore": 1073741
     }
+  },
+  {
+    "id": "empty_materials_labor_only",
+    "input": {
+      "markup_bps": 1500,
+      "labor": { "minutes": 30, "rate_ore_per_hour": 80000 },
+      "materials": [
+      ]
+    },
+    "expected": {
+      "materials_ore": 0,
+      "labor_ore": 40000,
+      "markup_ore": 0,
+      "vat_ore": 10000,
+      "total_ore": 50000
+    }
+  },
+  {
+    "id": "non_positive_qty_skipped_and_qty_sum_three_gets_markup",
+    "input": {
+      "markup_bps": 1500,
+      "labor": { "minutes": 0, "rate_ore_per_hour": 0 },
+      "materials": [
+        { "sku": "NAIL-100", "quantity": 0, "unit_ore": 0 },
+        { "sku": "TIMB-2x4", "quantity": -5, "unit_ore": 0 },
+        { "sku": "SCREW-50", "quantity": 3, "unit_ore": 0 }
+      ]
+    },
+    "expected": {
+      "materials_ore": 1350,
+      "labor_ore": 0,
+      "markup_ore": 202,
+      "vat_ore": 388,
+      "total_ore": 1940
+    }
+  },
+  {
+    "id": "negative_markup_not_clamped",
+    "input": {
+      "markup_bps": -1000,
+      "labor": { "minutes": 0, "rate_ore_per_hour": 0 },
+      "materials": [
+        { "sku": "SCREW-50", "quantity": 4, "unit_ore": 0 }
+      ]
+    },
+    "expected": {
+      "materials_ore": 1800,
+      "labor_ore": 0,
+      "markup_ore": -180,
+      "vat_ore": 405,
+      "total_ore": 2025
+    }
+  },
+  {
+    "id": "zero_rate_labor_is_zero",
+    "input": {
+      "markup_bps": 1500,
+      "labor": { "minutes": 60, "rate_ore_per_hour": 0 },
+      "materials": [
+        { "sku": "NAIL-100", "quantity": 1, "unit_ore": 0 }
+      ]
+    },
+    "expected": {
+      "materials_ore": 1250,
+      "labor_ore": 0,
+      "markup_ore": 0,
+      "vat_ore": 312,
+      "total_ore": 1562
+    }
+  },
+  {
+    "id": "non_positive_minutes_labor_is_zero",
+    "input": {
+      "markup_bps": 1500,
+      "labor": { "minutes": -30, "rate_ore_per_hour": 80000 },
+      "materials": [
+        { "sku": "NAIL-100", "quantity": 1, "unit_ore": 0 }
+      ]
+    },
+    "expected": {
+      "materials_ore": 1250,
+      "labor_ore": 0,
+      "markup_ore": 0,
+      "vat_ore": 312,
+      "total_ore": 1562
+    }
+  },
+  {
+    "id": "null_sku_uses_line_unit",
+    "input": {
+      "markup_bps": 1500,
+      "labor": { "minutes": 0, "rate_ore_per_hour": 0 },
+      "materials": [
+        { "sku": null, "quantity": 2, "unit_ore": 5000 }
+      ]
+    },
+    "expected": {
+      "materials_ore": 10000,
+      "labor_ore": 0,
+      "markup_ore": 0,
+      "vat_ore": 2500,
+      "total_ore": 12500
+    }
   }
 ]

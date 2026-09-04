@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Reflection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -32,6 +33,21 @@ public sealed class CalculateQuoteEndpointTests
         _factory.Dispose();
     }
 
+    [Test]
+    [Description("Every fixture row is also replayed through HTTP; no orphaned rows or ids.")]
+    public void Every_fixture_row_has_an_http_test_case_and_vice_versa()
+    {
+        var fixtureIds = QuoteCasesTests.LoadCases().Select(c => c.Id).OrderBy(x => x, StringComparer.Ordinal).ToList();
+        var testCaseIds = typeof(CalculateQuoteEndpointTests)
+            .GetMethod(nameof(Fixture_case_round_trips_through_http), BindingFlags.Public | BindingFlags.Instance)!
+            .GetCustomAttributes<TestCaseAttribute>()
+            .Select(a => (string)a.Arguments[0]!)
+            .OrderBy(x => x, StringComparer.Ordinal)
+            .ToList();
+
+        Assert.That(testCaseIds, Is.EqualTo(fixtureIds));
+    }
+
     // Same ids as QuoteCasesTests. Expected øre still come from fixtures/quote-cases.json.
     [TestCase("small_job_skips_markup")]
     [TestCase("volume_discount_then_markup")]
@@ -39,12 +55,18 @@ public sealed class CalculateQuoteEndpointTests
     [TestCase("cache_miss_uses_line_unit")]
     [TestCase("truncating_labor_and_vat")]
     [TestCase("largest_net_that_fits_int32")]
+    [TestCase("empty_materials_labor_only")]
+    [TestCase("non_positive_qty_skipped_and_qty_sum_three_gets_markup")]
+    [TestCase("negative_markup_not_clamped")]
+    [TestCase("zero_rate_labor_is_zero")]
+    [TestCase("non_positive_minutes_labor_is_zero")]
+    [TestCase("null_sku_uses_line_unit")]
     [Description("POST /quotes/calculate returns the oracle numbers for every fixture row.")]
     public async Task Fixture_case_round_trips_through_http(string caseId)
     {
         var fixture = QuoteCasesTests.LoadCases().Single(c => c.Id == caseId);
 
-        var response = await _client.PostAsJsonAsync("/quotes/calculate", fixture.Request);
+        var response = await _client.PostAsJsonAsync("/quotes/calculate", fixture.Input);
 
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK), $"{caseId} status");
         var actual = await response.Content.ReadFromJsonAsync<CalculateQuoteResponse>();

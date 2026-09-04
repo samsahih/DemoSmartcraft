@@ -2,7 +2,8 @@ namespace Smartcraft.Quotes.Features.Quotes.CalculateQuote;
 
 public interface IPriceBook
 {
-    int? UnitOreFor(string sku);
+    /// <returns>The book price, or null when <paramref name="sku"/> is null or not in the book.</returns>
+    int? UnitOreFor(string? sku);
 }
 
 /// <summary>
@@ -17,7 +18,7 @@ public sealed class InMemoryPriceBook : IPriceBook
         ["SCREW-50"] = 450,
     };
 
-    public int? UnitOreFor(string sku)
+    public int? UnitOreFor(string? sku)
     {
         if (string.IsNullOrEmpty(sku))
         {
