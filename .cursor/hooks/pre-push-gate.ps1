@@ -49,14 +49,32 @@ function Resolve-HeadSha([string]$repoRoot) {
 }
 
 $raw = [Console]::In.ReadToEnd()
+
+# Cursor sends the JSON with a UTF-8 byte-order mark in front of it. Windows
+# PowerShell 5.1 does not strip it, and ConvertFrom-Json then fails. Cut
+# everything before the first "{". Without this the hook silently allowed
+# every command, because a parse failure looked like "no command".
+$start = $raw.IndexOf('{')
+if ($start -ge 0) { $raw = $raw.Substring($start) }
+
 $command = ''
 try {
     $payload = $raw | ConvertFrom-Json
     if ($null -ne $payload.command) { $command = [string]$payload.command }
-} catch { }
+} catch {
+    # Parsing failed for some new reason. Do not let a possible push through
+    # unchecked: scan the raw text for the command instead. Non-push commands
+    # still pass, so a format change cannot stop all work.
+    $command = $raw
+}
 
 # Only gate pushes. Everything else passes untouched.
-if ($command -notmatch '(^|[\s;&|])git\s+([^\s;&|]+\s+)*push(\s|$)') {
+# Matches `git push`, `git -C .. push`, `git --no-pager push`, `git.exe push`,
+# and a quoted full path such as & "C:\...\git.exe" push.
+# Between `git` and `push` only git options are allowed (a token starting with
+# `-`, optionally followed by one value). Plain prose such as a commit message
+# saying "the git hook ... a push" must NOT match.
+if ($command -notmatch '(^|[\s;&|\\/"''])git(\.exe)?["'']?\s+(-[^\s;&|"'']*\s+([^\s;&|"''-][^\s;&|"'']*\s+)?)*push(\s|$|["''])') {
     Emit 'allow' '' ''
 }
 
