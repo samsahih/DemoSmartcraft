@@ -1,5 +1,7 @@
 # C++ to .NET Quote Engine — Proof of Method
 
+[![CI](https://github.com/samsahih/DemoSmartcraft/actions/workflows/ci.yml/badge.svg)](https://github.com/samsahih/DemoSmartcraft/actions/workflows/ci.yml)
+
 This repository demonstrates a repeatable pipeline for moving legacy C++ business logic into a modern .NET 10 API **without changing the numbers**.
 
 It is a functional proof of concept. **All tests pass.**
@@ -56,6 +58,8 @@ git config core.hooksPath .githooks
 ```
 
 `git push --no-verify` bypasses the git hook. Treat that as a deliberate, visible decision, not a shortcut.
+
+Once code reaches GitHub, `.github/workflows/ci.yml` runs two independent checks on every push and pull request to `main`: it recompiles the C++ generator and fails if `fixtures/quote-cases.json` is not byte-for-byte what it emits (so the oracle cannot drift or be hand-edited), and it builds and runs every test on Linux (so the port has no hidden dependency on this machine).
 
 ---
 

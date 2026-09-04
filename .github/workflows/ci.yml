@@ -1,0 +1,89 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  # Job 1: the oracle must be reproducible.
+  #
+  # fixtures/quote-cases.json is the single source of truth for what the C#
+  # must output. It is only trustworthy if it is exactly what the C++ emits.
+  # This job compiles legacy-cpp/ with MSVC (the compiler family the committed
+  # file was generated with), regenerates the fixture, and fails if the result
+  # differs from the committed file. That catches a hand-edited fixture, and a
+  # C++ change that was committed without regenerating.
+  oracle:
+    name: C++ oracle regenerates identically
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up MSVC (cl.exe on PATH)
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Compile and run the fixture generator
+        shell: cmd
+        working-directory: legacy-cpp
+        run: |
+          cl /nologo /EHsc /std:c++17 quote_price.cpp emit_fixtures.cpp /Fe:emit_fixtures.exe
+          if errorlevel 1 exit /b 1
+          emit_fixtures.exe > %RUNNER_TEMP%\regenerated.json
+
+      - name: Compare with the committed fixture
+        shell: pwsh
+        run: |
+          # Normalize line endings; the repo stores LF and Windows tooling writes CRLF.
+          $regenerated = ((Get-Content "$env:RUNNER_TEMP/regenerated.json" -Raw) -replace "`r`n", "`n").TrimEnd()
+          $committed   = ((Get-Content "fixtures/quote-cases.json" -Raw) -replace "`r`n", "`n").TrimEnd()
+          if ($regenerated -ne $committed) {
+            Write-Host "::error file=fixtures/quote-cases.json::The committed fixture does not match what legacy-cpp/emit_fixtures.cpp emits."
+            Write-Host "Either the JSON was edited by hand, or the C++ changed without regenerating."
+            Write-Host "Run legacy-cpp/compile-and-emit.bat and commit the result. Never edit the JSON directly."
+            Write-Host ""
+            Write-Host "--- diff (committed vs regenerated) ---"
+            $committed   | Set-Content "$env:RUNNER_TEMP/committed.norm.json"   -NoNewline
+            $regenerated | Set-Content "$env:RUNNER_TEMP/regenerated.norm.json" -NoNewline
+            git --no-pager diff --no-index -- "$env:RUNNER_TEMP/committed.norm.json" "$env:RUNNER_TEMP/regenerated.norm.json"
+            exit 1
+          }
+          Write-Host "fixtures/quote-cases.json is byte-identical to what the C++ emits."
+
+  # Job 2: the .NET port builds and every test passes.
+  #
+  # Runs on Linux on purpose: the port must have no dependency on Windows,
+  # Visual Studio, or anything on the developer's machine. The oracle job above
+  # already proved the fixture is honest; this job proves the C# matches it.
+  dotnet:
+    name: .NET build and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Test
+        run: dotnet test --no-build --configuration Release --logger "trx;LogFileName=results.trx" --results-directory TestResults
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: TestResults/
