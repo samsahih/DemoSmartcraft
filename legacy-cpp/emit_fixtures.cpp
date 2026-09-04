@@ -59,6 +59,18 @@ int main() {
         MaterialLine lines[] = {{"SCREW-50", 1, 0}};
         QuoteInput in = {lines, 1, {7, 80000}, 2000};
         print_case("truncating_labor_and_vat", in, quote_price(in));
+        std::printf(",\n");
+    }
+    {
+        // Largest net that still fits 32-bit math in the VAT step:
+        // 858,993 * 2500 = 2,147,482,500 <= INT_MAX. One more øre overflows.
+        // The overflow region itself is deliberately NOT emitted here: signed
+        // overflow is undefined behaviour in C++, so whatever this compiler
+        // prints is an accident, not a business rule. The .NET port refuses
+        // those inputs (HTTP 400); its own test covers that.
+        MaterialLine lines[] = {{"CUSTOM-X", 1, 858993}};
+        QuoteInput in = {lines, 1, {0, 0}, 0};
+        print_case("largest_net_that_fits_int32", in, quote_price(in));
         std::printf("\n");
     }
 

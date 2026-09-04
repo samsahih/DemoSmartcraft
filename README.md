@@ -24,6 +24,7 @@ Calculates HVAC and Plumbing job estimates using integer øre arithmetic (1 kron
 * **Volume Discount:** Line items with 10+ items receive a 5% discount before markup is applied.
 * **Materials-Only Markup:** Markup percentage applies strictly to materials, never labor.
 * **Integer Truncation:** 25% VAT and labor calculations use C++ integer division (fractional øre are truncated toward zero, not rounded).
+* **32-bit Ceiling:** The legacy math overflows above roughly 8,590 NOK net (undefined behaviour in C++). The API refuses such quotes with HTTP 400 instead of returning a wrapped, wrong total. See `contracts/quote_price.pseudocode.md`.
 
 ---
 

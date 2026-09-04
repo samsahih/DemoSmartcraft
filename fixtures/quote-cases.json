@@ -85,5 +85,22 @@
       "vat_ore": 2445,
       "total_ore": 12228
     }
+  },
+  {
+    "id": "largest_net_that_fits_int32",
+    "input": {
+      "markup_bps": 0,
+      "labor": { "minutes": 0, "rate_ore_per_hour": 0 },
+      "materials": [
+        { "sku": "CUSTOM-X", "quantity": 1, "unit_ore": 858993 }
+      ]
+    },
+    "expected": {
+      "materials_ore": 858993,
+      "labor_ore": 0,
+      "markup_ore": 0,
+      "vat_ore": 214748,
+      "total_ore": 1073741
+    }
   }
 ]

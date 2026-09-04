@@ -68,3 +68,26 @@ PRICE_BOOK (loaded once, then reused):
 | Pointer + length | `materials` + `material_count` | No bounds check; count 0 is an empty quote |
 
 `reset_price_book_for_tests()` clears the map and the loaded flag so tests can re-seed the book.
+
+## Integer range (32-bit ceiling)
+
+Every intermediate product is a C++ `int` (32-bit, max 2,147,483,647). The
+multiply-before-divide steps overflow at ordinary job sizes:
+
+| Step | Overflows when | In NOK, roughly |
+|---|---|---|
+| `net * 2500` (VAT) | `net > 858,993` øre | ~8,590 |
+| `materials_ore * markup_bps` at 1500 bps | `materials_ore > 1,431,655` øre | ~14,300 |
+| `minutes * rate_ore_per_hour` at 80,000/h | `minutes > 26,843` | ~447 hours |
+| `unit * quantity`, `ore * 95` | line-dependent | |
+
+In C++ this is **undefined behaviour**. The build we measured wraps: 100 x
+TIMB-2x4 + 60 min labor returns VAT −198,121 and total 727,379, lower than
+the pre-VAT net. That output is a compiler accident, not a business rule.
+
+**Port policy:** the .NET calculator runs the same arithmetic in a `checked`
+context. Any overflow throws and `POST /quotes/calculate` returns HTTP 400
+"Quote too large to calculate". Every input the C++ answers without overflow
+still produces identical øre. The fixture row `largest_net_that_fits_int32`
+locks the last value that fits; `CalculateQuoteEndpointTests` locks the
+refusal one øre past it.

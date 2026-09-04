@@ -30,7 +30,7 @@ public sealed class QuoteCasesTests
     /// toward zero (C++ integer division).
     /// </summary>
     [Test]
-    [Description("Locks the five oracle case ids, including truncating_labor_and_vat.")]
+    [Description("Locks the oracle case ids, including truncating_labor_and_vat.")]
     public void Fixture_file_is_the_oracle_and_includes_the_truncation_tripwire()
     {
         var cases = LoadCases();
@@ -41,6 +41,7 @@ public sealed class QuoteCasesTests
             "price_book_overrides_line_unit", // known SKU ignores the line's unit_ore
             "cache_miss_uses_line_unit",      // unknown SKU uses the line's unit_ore
             "truncating_labor_and_vat",       // 7 min labor and 25% VAT truncate toward 0
+            "largest_net_that_fits_int32",    // 858,993 * 2500 is the last product that fits int
         }));
     }
 
@@ -53,6 +54,7 @@ public sealed class QuoteCasesTests
     //   price_book_overrides_line_unit — NAIL-100 is in the in-memory book, so 99999 on the line is a lie
     //   cache_miss_uses_line_unit      — CUSTOM-X is not in the book; SCREW-50 is (450 øre, not 1)
     //   truncating_labor_and_vat       — 7 * 80000 / 60 = 9333, not 9333.33 rounded
+    //   largest_net_that_fits_int32    — net 858,993: the last value whose * 2500 fits 32-bit
     //
     // Expected øre still come from the JSON, not from these comments.
     [TestCase("small_job_skips_markup")]
@@ -60,6 +62,7 @@ public sealed class QuoteCasesTests
     [TestCase("price_book_overrides_line_unit")]
     [TestCase("cache_miss_uses_line_unit")]
     [TestCase("truncating_labor_and_vat")]
+    [TestCase("largest_net_that_fits_int32")]
     [Description("C# output must match fixtures/quote-cases.json exactly (integer øre).")]
     public void Matches_oracle_fixture(string caseId)
     {
@@ -92,7 +95,7 @@ public sealed class QuoteCasesTests
     /// (<c>fixtures/quote-cases.json</c> is linked in the test .csproj).
     /// Maps JSON onto the existing slice records; it does not define a second DTO tree.
     /// </summary>
-    private static IReadOnlyList<QuoteCaseFixture> LoadCases()
+    internal static IReadOnlyList<QuoteCaseFixture> LoadCases()
     {
         var path = Path.Combine(TestContext.CurrentContext.TestDirectory, "fixtures", "quote-cases.json");
         Assert.That(File.Exists(path), Is.True, $"Missing oracle file: {path}");
