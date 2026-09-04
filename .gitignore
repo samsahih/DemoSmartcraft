@@ -7,3 +7,6 @@ legacy-cpp/*.exe
 legacy-cpp/*.obj
 legacy-cpp/*.pdb
 legacy-cpp/*.ilk
+TestResults/
+# Written by the pre-push-review skill; valid for one commit only. Never commit it.
+.cursor/push-approval.json

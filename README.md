@@ -37,6 +37,27 @@ Calculates HVAC and Plumbing job estimates using integer øre arithmetic (1 kron
 
 ---
 
+## Pre-push Review Gate
+
+Nothing is pushed from Cursor until the agent has reviewed the commit and a human has confirmed.
+
+1. Commit your work, then tell the agent to push (or run `/pre-push-review`).
+2. The agent follows `.cursor/skills/pre-push-review/SKILL.md`: builds, runs the tests, checks the C# against the C++ oracle, checks the slice guardrails, and looks for paths that return a wrong number silently.
+3. **NOT READY:** the agent prints a plain-language list of blockers and stops. You pick which one to fix; it fixes only that, commits, and reviews again.
+4. **READY:** the agent writes `.cursor/push-approval.json` (tied to the exact commit hash) and runs `git push`. The hook in `.cursor/hooks.json` verifies the approval matches `HEAD` and then asks you to confirm the push.
+
+Any new commit invalidates the approval. The approval file is git-ignored and never committed.
+
+The same check runs as a native git hook (`.githooks/pre-push`), so a push from a terminal or Visual Studio is held to the same standard. Enable it once per clone:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+`git push --no-verify` bypasses the git hook. Treat that as a deliberate, visible decision, not a shortcut.
+
+---
+
 ## How to Run
 
 ```bash

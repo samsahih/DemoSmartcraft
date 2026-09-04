@@ -1,0 +1,74 @@
+#!/bin/sh
+# Native git pre-push gate. Mirrors .cursor/hooks/pre-push-gate.ps1 so a push
+# from a terminal or Visual Studio is held to the same standard as one made
+# through Cursor.
+#
+# Allows the push only if .cursor/push-approval.json exists, has verdict READY,
+# and its commit equals the commit actually being pushed. The approval file is
+# written by the pre-push-review skill after a passing review.
+#
+# Enable once per clone:   git config core.hooksPath .githooks
+# Bypass (deliberately):   git push --no-verify
+#
+# stdin: one line per ref:  <local ref> <local sha> <remote ref> <remote sha>
+
+approval=".cursor/push-approval.json"
+zero="0000000000000000000000000000000000000000"
+
+fail() {
+    echo "" >&2
+    echo "PUSH BLOCKED: $1" >&2
+    echo "" >&2
+    echo "  In Cursor, run the pre-push-review skill (/pre-push-review)." >&2
+    echo "  It reviews the current commit and, only if the verdict is READY," >&2
+    echo "  writes $approval for that exact commit. Then push again." >&2
+    echo "" >&2
+    exit 1
+}
+
+# Pull a top-level string field out of the small JSON file using only shell
+# builtins, so it works even when sed/jq/grep are not on PATH (minimal git).
+json_field() {
+    key="\"$1\""
+    while IFS= read -r line || [ -n "$line" ]; do
+        case "$line" in
+            *"$key"*)
+                rest=${line#*"$key"}                 # text after "key"
+                rest=${rest#*:}                      # text after the colon
+                rest=${rest#"${rest%%[![:space:]]*}"} # trim leading whitespace
+                case "$rest" in
+                    \"*) rest=${rest#\"}; printf '%s\n' "${rest%%\"*}" ;;
+                    *)   printf '%s\n' "${rest%%[,}]*}" ;;
+                esac
+                return 0
+                ;;
+        esac
+    done < "$approval"
+    return 1
+}
+
+if [ ! -f "$approval" ]; then
+    fail "no pre-push review approval found."
+fi
+
+verdict=$(json_field verdict)
+approved=$(json_field commit)
+
+if [ "$verdict" != "READY" ]; then
+    fail "last review verdict was '$verdict', not READY. Fix the listed blockers, commit, and review again."
+fi
+
+if [ -z "$approved" ]; then
+    fail "$approval has no commit field. Delete it and re-run the review."
+fi
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+    # Deleting a remote branch pushes no code; let it through.
+    [ "$local_sha" = "$zero" ] && continue
+
+    if [ "$local_sha" != "$approved" ]; then
+        fail "approval is for commit $approved but you are pushing $local_sha ($local_ref). The code changed since the review; re-run it on the current commit."
+    fi
+done
+
+exit 0

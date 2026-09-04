@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "hooks": {
+    "beforeShellExecution": [
+      {
+        "command": "pwsh -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .cursor/hooks/pre-push-gate.ps1",
+        "matcher": "git\\s+([^\\s;&|]+\\s+)*push",
+        "timeout": 15,
+        "failClosed": true
+      }
+    ]
+  }
+}
