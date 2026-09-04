@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Smartcraft.Quotes.Features.Quotes.CalculateQuote;
@@ -86,5 +87,41 @@ public sealed class CalculateQuoteEndpointTests
         var response = await _client.PostAsJsonAsync("/quotes/calculate", request);
 
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+    }
+
+    // The slice records declare Materials and Labor as non-nullable, but JSON can
+    // still omit them or send null, and System.Text.Json binds that without
+    // complaint. Before this check the calculator threw a NullReferenceException
+    // and the client got a raw 500. Raw JSON here, because that is what a client
+    // actually sends; the C# records cannot express these shapes honestly.
+    [TestCase("""{ "labor": { "minutes": 0, "rateOrePerHour": 0 }, "markupBps": 0 }""", "materials", TestName = "Missing_materials_returns_400")]
+    [TestCase("""{ "materials": null, "labor": { "minutes": 0, "rateOrePerHour": 0 }, "markupBps": 0 }""", "materials", TestName = "Null_materials_returns_400")]
+    [TestCase("""{ "materials": [], "markupBps": 0 }""", "labor", TestName = "Missing_labor_returns_400")]
+    [TestCase("""{ "materials": [], "labor": null, "markupBps": 0 }""", "labor", TestName = "Null_labor_returns_400")]
+    [TestCase("""{ "materials": [ null ], "labor": { "minutes": 0, "rateOrePerHour": 0 }, "markupBps": 0 }""", "materials[0]", TestName = "Null_material_line_returns_400")]
+    [Description("A body with a missing or null materials/labor shape is a 400 naming the field, not a 500.")]
+    public async Task Null_request_shape_returns_400_naming_the_field(string body, string expectedField)
+    {
+        var response = await _client.PostAsync("/quotes/calculate",
+            new StringContent(body, System.Text.Encoding.UTF8, "application/json"));
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        var problem = await response.Content.ReadFromJsonAsync<HttpValidationProblemDetails>();
+        Assert.That(problem, Is.Not.Null);
+        Assert.That(problem!.Errors.Keys, Does.Contain(expectedField));
+    }
+
+    // An empty materials list is a legal legacy input (material_count == 0 in the
+    // C++), so the null check must not reject it. Status only: the numbers for an
+    // empty quote are not a fixture row yet, and expected øre are never hand-typed.
+    [Test]
+    [Description("Empty materials is a valid quote, not a validation error.")]
+    public async Task Empty_materials_is_accepted()
+    {
+        var request = new CalculateQuoteRequest([], new QuoteLaborLine(30, 80000), 1500);
+
+        var response = await _client.PostAsJsonAsync("/quotes/calculate", request);
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
     }
 }

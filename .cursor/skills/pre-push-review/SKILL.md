@@ -31,8 +31,10 @@ Work through every step. Do not skip a step because the change "looks small".
 
 - `git status --short` — if there are uncommitted changes, stop and ask the
   human to commit or discard them first. The review is of a commit, not of a
-  working tree. (If `git` is not on PATH, use
-  `C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\TeamFoundation\Team Explorer\Git\cmd\git.exe`.)
+  working tree. (If `git` is not on PATH, locate it before continuing: on
+  Windows, `Get-Command git` and, failing that, the copy bundled with Git for
+  Windows or Visual Studio under `...\Team Explorer\Git\cmd\git.exe`. Do not
+  hard-code a machine-specific path into this file.)
 - `git rev-parse HEAD` and `git log --oneline @{upstream}..HEAD` to list the
   commits that would go out. If there is no upstream, review everything.
 - `git diff @{upstream}...HEAD --stat` then read the full diff. Read every
